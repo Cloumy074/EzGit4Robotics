@@ -42,7 +42,6 @@ fn fetch() {
     let fetch_cmd = Command::new("git")
         .arg("fetch")
         .arg("origin")
-        .arg("main")
         .output()
         .expect("Failed to execute git fetch command");
     
@@ -52,10 +51,10 @@ fn fetch() {
 // Function to pull changes with rebase
 fn pull() {
     cd();
+    fetch();
     let pull_cmd = Command::new("git")
-        .arg("pull")
-        .arg("origin")
-        .arg("main")
+        .arg("merge")
+        .arg("origin/main")
         .output()
         .expect("Failed to execute git pull command");
 
@@ -152,7 +151,6 @@ fn main() {
                 break; 
             }
             "2" => {
-                fetch();
                 pull();
                 wait_for_enter();
                 break; 
