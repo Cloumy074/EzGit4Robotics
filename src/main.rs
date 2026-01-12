@@ -1,86 +1,172 @@
-// A simple CLI in Rust
-// Import the env module to get the command line arguments
 use std::io::{self, Write};
-use std::process;
-use std::process::Command;
+use std::env;
+use std::path::Path;
+use std::process::{Command, Output};
 
-fn main() {
-    println!("Hello Strawhat! Please tell me what do you want to do?
-    1. This is my first use.
-    2. I need to download the working files.
-    3. I want to upload my work.
-    4. I entered by accident. Exit.");
-    print!("> ");
+fn wait_for_enter() {
+    println!("Press Enter to continue...");
+    let mut buffer = String::new();
+    io::stdin().read_line(&mut buffer).unwrap();
+}
 
-    io::stdout().flush().unwrap();
-
-    let mut choice = String::new();
-    io::stdin().read_line(&mut choice).unwrap();
-
-    match choice.trim() {
-        "1" => {
-            println!("Welcome! Please let me introduce the program to you first.");
-            intro();
-        }
-        "2" => {
-            fetch();
-            pull();
-        }
-        "3" => {
-            push();
-        }
-        "4" => {
-            println!("Exiting. See you later!");
-            process::exit(0);
-        }
-        _ => {
-            println!("Invalid choice. Please choose a valid option.");
-        }
+fn handle_command_output(output: Output) {
+    if !output.status.success() {
+        eprintln!("Command failed:");
+        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+    } else {
+        println!("{}", String::from_utf8_lossy(&output.stdout));
     }
 }
 
-fn intro() {
-    println!("Hello Strawhat!
-    Let me introduce what would you need to do 
-    make sure that no conflit will happen when 
-    you work on editing with other. 
-    
-    1. You will have to clone the repository first. Don't worry, I'll do it now for you.");
-    clone();
-    println!("You should find now under the current folder a new folder named \"VideoEditing_2026\"
-    WARNING: If you are working, please let others know before you have done any work!
-    Because editing files are not text files, git cannot merge the changes automatically.
-    
-    2. After cloning, import the project to DaVinci Resolve. You can start working on your part now.
-    Remember to EXPORT the project (NOT JUST SAVE) after you have done your work.
-    
-    3. You can close this program while working. When you are done, please run this program again but to UPLOAD your work.
-    4. EVERY TIME before working on the file in the future, please run this program first to DOWNLOAD the latest version
-    so you won't have any conflict with others' work.
-    
-    Please note that this program is JUST a tool to make you sync your work with others without needing to learn git commands.
-    
-    If you still have any questions or need help, please contact Cloumy074 on Discord. Thank you!");
+fn cd() {
+    let target_dir = Path::new("VideoEditing2026");
+    if target_dir.exists() {
+        env::set_current_dir(target_dir).expect("Failed to change directory");
+    }
 }
 
-fn clone() {
+// Function for repository cloning
+fn clone(repo_url: &str) {
     let clone_cmd = Command::new("git")
         .arg("clone")
-        .arg("https://github.com/Cloumy074/Test_Davinci.git")
+        .arg(repo_url)
         .output()
-        .expect("Failed to execute git clone command");
-    
-    println!("{}", String::from_utf8_lossy(&clone_cmd.stdout));
+        .unwrap();
+
+    handle_command_output(clone_cmd);
 }
 
+// Function to fetch changes from the remote repository
 fn fetch() {
-
+    cd();
+    let fetch_cmd = Command::new("git")
+        .arg("fetch")
+        .arg("origin")
+        .arg("main")
+        .output()
+        .expect("Failed to execute git fetch command");
+    
+    handle_command_output(fetch_cmd);
 }
 
+// Function to pull changes with rebase
 fn pull() {
+    cd();
+    let pull_cmd = Command::new("git")
+        .arg("pull")
+        .arg("origin")
+        .arg("main")
+        .output()
+        .expect("Failed to execute git pull command");
 
+    handle_command_output(pull_cmd);
 }
 
+// Function to stage, commit, and push changes
 fn push() {
+    cd();
+    let add_cmd = Command::new("git")
+        .arg("add")
+        .arg(".") // Stage all files respecting .gitignore
+        .output()
+        .expect("Failed to execute git add command");
+    handle_command_output(add_cmd);
 
+    let name = get_user_name();
+    let commit_message = format!("Update from {}", name);
+
+    let commit_cmd = Command::new("git")
+        .arg("commit")
+        .arg("-m")
+        .arg(commit_message)
+        .output()
+        .expect("Failed to execute git commit command");
+    handle_command_output(commit_cmd);
+
+    let push_cmd = Command::new("git")
+        .arg("push")
+        .arg("origin")
+        .arg("main")
+        .output()
+        .expect("Failed to execute git push command");
+    handle_command_output(push_cmd);
+}
+
+// Helper function to get and validate user input
+fn get_user_name() -> String {
+    let mut name = String::new();
+    loop {
+        print!("What is your name? (Without Space Please): ");
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut name).unwrap();
+        let name = name.trim();
+        if !name.is_empty() {
+            return name.to_string();
+        }
+        println!("Name cannot be empty. Please try again.");
+    }
+}
+
+// Introductory function with a friendly message
+fn intro(repo_url: &str) {
+    println!("Hello Strawhat!");
+    println!("Let me introduce what you need to do to avoid conflicts when collaborating:");
+    println!("\n1. Clone the repository.");
+    println!("   Don't worry, I'll do that for you now.");
+    
+    clone(repo_url);
+    println!("\n   You should now find a new folder named 'VideoEditing2026' in the current directory.");
+    println!("   WARNING: Inform others before starting your work to avoid conflicts,");
+    println!("   as non-text files cannot be merged by Git.\n");
+    
+    println!("2. Import the project to DaVinci Resolve and start working on your part.");
+    println!("   Remember to EXPORT the project after completing your work (not just SAVE).\n");
+    
+    println!("3. Close this program while working. When you're done, re-run this program to upload your changes.");
+    println!("4. Always run this program to DOWNLOAD the latest version of files before working again.\n");
+    
+    println!("This program simplifies syncing your work with others, so you don't need to know Git commands.");
+    println!("For questions or assistance, contact Cloumy074 on Discord. Thank you!\n");
+}
+
+fn main() {
+    let repo_url = "https://github.com/Vanier-Robotics/VideoEditing2026.git";
+
+    println!("Hello Strawhat! Please tell me what you want to do:
+    1. This is my first use.
+    2. I need to download the working files.
+    3. I want to upload my work.
+    4. Exit.");
+
+    loop {
+        print!("> ");
+        io::stdout().flush().unwrap();
+
+        let mut choice = String::new();
+        io::stdin().read_line(&mut choice).unwrap();
+
+        match choice.trim() {
+            "1" => {
+                intro(repo_url);
+                wait_for_enter();
+                break; 
+            }
+            "2" => {
+                fetch();
+                pull();
+                wait_for_enter();
+                break; 
+            }
+            "3" => {
+                push();
+                wait_for_enter();
+                break; 
+            }
+            "4" => {
+                println!("Exiting. See you later!");
+                break;
+            }
+            _ => println!("Invalid choice. Please choose a valid option."),
+        }
+    }
 }
