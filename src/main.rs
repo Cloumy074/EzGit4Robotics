@@ -137,34 +137,37 @@ fn main() {
     3. I want to upload my work.
     4. Exit.");
 
-    loop {
+    'user_input: loop {
         print!("> ");
         io::stdout().flush().unwrap();
 
         let mut choice = String::new();
-        io::stdin().read_line(&mut choice).unwrap();
+        match io::stdin().read_line(&mut choice) {
+            Ok(_n) => {}
+            Err(error) => {
+                println!("error: {error}");
+                break 'user_input;
+            },
+        }
 
         match choice.trim() {
             "1" => {
                 intro(repo_url);
                 wait_for_enter();
-                break; 
             }
             "2" => {
                 pull();
                 wait_for_enter();
-                break; 
             }
             "3" => {
                 push();
                 wait_for_enter();
-                break; 
             }
             "4" => {
                 println!("Exiting. See you later!");
-                break;
+                break 'user_input;
             }
             _ => println!("Invalid choice. Please choose a valid option."),
-        }
+        } 
     }
 }
